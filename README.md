@@ -19,13 +19,14 @@ local wezterm = require("wezterm")
 local config = {}
 
 -- Add the plugin
+---@type Pivot
 local pivot_panes = wezterm.plugin.require("https://github.com/chrisgve/pivot_panes.wezterm")
 
 -- Add keybinding
 config.keys = {
   -- Other key assignments...
   {
-    key = "p", 
+    key = "p",
     mods = "CTRL|SHIFT|ALT",
     action = wezterm.action_callback(pivot_panes.toggle_orientation_callback),
   },
@@ -57,7 +58,7 @@ return config
 {
   -- Maximum number of scrollback lines to preserve (0 to disable)
   max_scrollback_lines = 1000,
-  
+
   -- Table mapping application names to priority values
   -- Higher values indicate higher priority for preservation
   priority_apps = {
@@ -65,7 +66,7 @@ return config
     ["bash"] = 10,
     ["zsh"] = 10,
     ["fish"] = 10,
-    
+
     -- Medium priority - state might be partially preserved
     ["less"] = 5,
     ["man"] = 5,
@@ -73,7 +74,7 @@ return config
     ["htop"] = 5,
     ["btop"] = 5,
     ["lazygit"] = 5,
-    
+
     -- Low priority - complex applications with state that's hard to restore
     ["vim"] = 3,
     ["nvim"] = 3,
@@ -81,12 +82,12 @@ return config
     ["emacs"] = 2,
     ["nano"] = 3,
   },
-  
+
   -- List of process names that should be identified as shells
   shell_detection = {
     "bash", "zsh", "fish", "sh", "dash", "ksh", "csh", "tcsh"
   },
-  
+
   -- Enable debug logging
   debug = false,
 }
@@ -123,6 +124,10 @@ The plugin:
 - Full application state cannot be preserved for complex applications
 - Currently only works with pairs of panes (not complex layouts)
 - Scrollback preservation is limited by WezTerm's API capabilities
+
+## Type annotations
+
+Thanks to [DrKJeff16](https://github.com/DrKJeff16/wezterm-types) for building annotations for this plugin.
 
 ## Contributions
 
