@@ -120,7 +120,7 @@ end
 ---@param panes table Array of panes to pivot
 ---@param current_orientation string Current orientation "horizontal" or "vertical"
 ---@return boolean success
-function M.pivot_panes(panes, current_orientation)
+function M.pivot_panes(panes, current_orientation, pane_info_by_id, gui_window)
 	-- Capture state of both panes
 	local pane_states = {}
 	for i, pane in ipairs(panes) do
@@ -130,19 +130,15 @@ function M.pivot_panes(panes, current_orientation)
 	-- Determine target orientation (toggle)
 	local target_orientation = current_orientation == "horizontal" and "vertical" or "horizontal"
 
-	-- Get dimensions of the combined pane area
-	local pos1 = panes[1]:get_position()
-	local pos2 = panes[2]:get_position()
-	local dims1 = panes[1]:get_dimensions()
-	local dims2 = panes[2]:get_dimensions()
-
 	-- Sort panes by position for consistent behavior
 	local sorted_panes = {}
 	local sorted_states = {}
+	local first_info = pane_info_by_id[panes[1]:pane_id()]
+	local second_info = pane_info_by_id[panes[2]:pane_id()]
 
 	if current_orientation == "horizontal" then
 		-- Sort by x position for horizontal orientation
-		if pos1.x < pos2.x then
+		if first_info.left < second_info.left then
 			sorted_panes = { panes[1], panes[2] }
 			sorted_states = { pane_states[1], pane_states[2] }
 		else
@@ -151,7 +147,7 @@ function M.pivot_panes(panes, current_orientation)
 		end
 	else
 		-- Sort by y position for vertical orientation
-		if pos1.y < pos2.y then
+		if first_info.top < second_info.top then
 			sorted_panes = { panes[1], panes[2] }
 			sorted_states = { pane_states[1], pane_states[2] }
 		else
@@ -161,8 +157,12 @@ function M.pivot_panes(panes, current_orientation)
 	end
 
 	-- Close the second pane
-	local window = sorted_panes[1]:window()
-	sorted_panes[2]:close()
+	if not gui_window then
+		logger:error("A GUI window is required to close the pane being pivoted")
+		return false
+	end
+	sorted_panes[2]:activate()
+	gui_window:perform_action(wezterm.action.CloseCurrentPane({ confirm = false }), sorted_panes[2])
 
 	-- Create a new pane with the new orientation
 	local new_pane
@@ -183,16 +183,9 @@ function M.pivot_panes(panes, current_orientation)
 		return false
 	end
 
-	-- Restore states to the panes, prioritizing by process priority
-	table.sort(sorted_states, function(a, b)
-		return a.priority > b.priority
-	end)
-
-	-- Apply states
-	logger:debug("Restoring highest priority pane:", sorted_states[1].process_name)
-	M.restore_pane_state(sorted_panes[1], sorted_states[1])
-
-	logger:debug("Restoring second priority pane:", sorted_states[2].process_name)
+	-- The first pane remains alive with its state intact; restore only the pane
+	-- recreated by the new split.
+	logger:debug("Restoring recreated pane:", sorted_states[2].process_name)
 	M.restore_pane_state(new_pane, sorted_states[2])
 
 	return true
@@ -201,7 +194,7 @@ end
 -- Toggle pane orientation for the current or specified panes
 ---@param tab_or_pane? any Optional tab or pane to use (defaults to current)
 ---@return boolean success
-function M.toggle_orientation(tab_or_pane)
+function M.toggle_orientation(tab_or_pane, gui_window)
 	local tab = tab_or_pane
 
 	-- A keybinding callback supplies the active tab explicitly. For callers
@@ -253,7 +246,7 @@ function M.toggle_orientation(tab_or_pane)
 		-- Check if we can pivot the selected panes
 			local can_pivot, orientation = M.can_pivot(adjacent_panes, pane_info_by_id)
 		if can_pivot then
-			return M.pivot_panes(adjacent_panes, orientation)
+			return M.pivot_panes(adjacent_panes, orientation, pane_info_by_id, gui_window)
 		else
 			logger:warn("Could not find suitable adjacent pane to pivot with")
 			return false
@@ -303,7 +296,7 @@ function M.toggle_orientation(tab_or_pane)
 		-- Check if we can pivot the selected panes
 		local can_pivot, orientation = M.can_pivot(selected_panes, pane_info_by_id)
 		if can_pivot then
-			return M.pivot_panes(selected_panes, orientation)
+			return M.pivot_panes(selected_panes, orientation, pane_info_by_id, gui_window)
 		else
 			logger:warn("Could not find suitable panes to pivot")
 			return false

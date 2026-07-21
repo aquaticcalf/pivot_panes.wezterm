@@ -41,7 +41,7 @@ end
 ---@param pane any WezTerm pane object
 ---@return boolean success
 function M.toggle_orientation_callback(window, pane)
-	return M.pivot.toggle_orientation(window:active_tab())
+	return M.pivot.toggle_orientation(window:active_tab(), window)
 end
 
 -- Directly toggle pane orientation
