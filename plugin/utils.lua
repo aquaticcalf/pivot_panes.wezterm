@@ -1,6 +1,3 @@
-local wezterm = require("wezterm") --[[@as Wezterm]]
-local lib = wezterm.plugin.require("https://github.com/chrisgve/lib.wezterm")
-
 local M = {}
 
 -- Get priority for a process name
@@ -16,11 +13,10 @@ end
 ---@param config PivotConfig
 ---@return string|nil
 function M.capture_scrollback(pane, config)
-	if config.max_scrollback_lines <= 0 then
-		return nil
-	end
-	
-	return lib.wezterm.capture_scrollback(pane, config.max_scrollback_lines)
+	-- State restoration intentionally preserves the original pane and recreates
+	-- only the second pane; scrollback is not replayed. Avoid the legacy helper
+	-- that is incompatible with current WezTerm.
+	return nil
 end
 
 return M
