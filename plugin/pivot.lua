@@ -1,5 +1,5 @@
 local wezterm = require("wezterm") --[[@as Wezterm]]
-local lib = wezterm.plugin.require("https://github.com/chrisgve/lib.wezterm")
+local lib = wezterm.plugin.require("https://github.com/aquaticcalf/lib.wezterm")
 
 local utils = require("utils")
 local config = require("config")
