@@ -86,7 +86,7 @@ end
 ---@param panes table Array of panes to check
 ---@return boolean can_pivot
 ---@return string|nil orientation Current orientation if can pivot
-function M.can_pivot(panes)
+function M.can_pivot(panes, pane_info_by_id)
 	if #panes < 2 then
 		logger:debug("Cannot pivot: Not enough panes (need at least 2)")
 		return false, nil
@@ -98,7 +98,9 @@ function M.can_pivot(panes)
 		return false, nil
 	end
 
-	local is_adjacent, orientation = lib.wezterm.get_panes_orientation(panes[1], panes[2])
+	local first_info = pane_info_by_id[panes[1]:pane_id()]
+	local second_info = pane_info_by_id[panes[2]:pane_id()]
+	local is_adjacent, orientation = lib.wezterm.get_panes_orientation(first_info, second_info)
 
 	if not is_adjacent then
 		logger:debug("Cannot pivot: Panes are not adjacent")
@@ -222,6 +224,10 @@ function M.toggle_orientation(tab_or_pane)
 	end
 
 	local panes_with_info = tab:panes_with_info()
+	local pane_info_by_id = {}
+	for _, pane_info in ipairs(panes_with_info) do
+		pane_info_by_id[pane_info.pane:pane_id()] = pane_info
+	end
 
 	-- If we were given a specific pane, find the adjacent pane to pivot with
 	if tab_or_pane and tab_or_pane.get_position then
@@ -233,7 +239,10 @@ function M.toggle_orientation(tab_or_pane)
 		for _, p_info in ipairs(panes_with_info) do
 			local pane = p_info.pane
 			if pane ~= given_pane then
-				local is_adjacent, _ = lib.wezterm.get_panes_orientation(given_pane, pane)
+				local is_adjacent, _ = lib.wezterm.get_panes_orientation(
+					pane_info_by_id[given_pane:pane_id()],
+					pane_info_by_id[pane:pane_id()]
+				)
 				if is_adjacent then
 					table.insert(adjacent_panes, pane)
 					break
@@ -242,7 +251,7 @@ function M.toggle_orientation(tab_or_pane)
 		end
 
 		-- Check if we can pivot the selected panes
-		local can_pivot, orientation = M.can_pivot(adjacent_panes)
+			local can_pivot, orientation = M.can_pivot(adjacent_panes, pane_info_by_id)
 		if can_pivot then
 			return M.pivot_panes(adjacent_panes, orientation)
 		else
@@ -276,7 +285,10 @@ function M.toggle_orientation(tab_or_pane)
 				for _, p_info in ipairs(panes_with_info) do
 					local pane = p_info.pane
 					if pane ~= active_pane then
-						local is_adjacent, _ = lib.wezterm.get_panes_orientation(active_pane, pane)
+						local is_adjacent, _ = lib.wezterm.get_panes_orientation(
+							pane_info_by_id[active_pane:pane_id()],
+							pane_info_by_id[pane:pane_id()]
+						)
 						if is_adjacent then
 							table.insert(selected_panes, pane)
 							break
@@ -287,7 +299,7 @@ function M.toggle_orientation(tab_or_pane)
 		end
 
 		-- Check if we can pivot the selected panes
-		local can_pivot, orientation = M.can_pivot(selected_panes)
+		local can_pivot, orientation = M.can_pivot(selected_panes, pane_info_by_id)
 		if can_pivot then
 			return M.pivot_panes(selected_panes, orientation)
 		else
