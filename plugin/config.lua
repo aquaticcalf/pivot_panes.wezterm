@@ -1,7 +1,36 @@
 local wezterm = require("wezterm") --[[@as Wezterm]]
-local lib = wezterm.plugin.require("https://github.com/aquaticcalf/lib.wezterm")
-
 local M = {}
+
+-- WezTerm does not provide the Neovim-style tbl_deep_extend helper that was
+-- previously supplied by lib.wezterm. Keep this small dependency local so the
+-- plugin continues to load across WezTerm versions.
+local function deep_extend(defaults, overrides)
+	local function copy(value)
+		if type(value) ~= "table" then
+			return value
+		end
+
+		local result = {}
+		for key, nested_value in pairs(value) do
+			result[key] = copy(nested_value)
+		end
+		return result
+	end
+
+	local function merge(result, source)
+		for key, value in pairs(source or {}) do
+			if type(value) == "table" and type(result[key]) == "table" then
+				merge(result[key], value)
+			else
+				result[key] = copy(value)
+			end
+		end
+	end
+
+	local result = copy(defaults)
+	merge(result, overrides)
+	return result
+end
 
 -- Default configuration
 ---@type PivotConfig
@@ -57,7 +86,7 @@ M.config = nil
 ---@param user_config PivotConfig|nil
 ---@return PivotConfig
 function M.setup(user_config)
-	M.config = lib.table.tbl_deep_extend("force", M.default_config, user_config or {})
+	M.config = deep_extend(M.default_config, user_config)
 	return M.config
 end
 

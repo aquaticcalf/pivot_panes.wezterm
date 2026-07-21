@@ -200,11 +200,24 @@ end
 ---@param tab_or_pane? any Optional tab or pane to use (defaults to current)
 ---@return boolean success
 function M.toggle_orientation(tab_or_pane)
-	local window = wezterm.mux.get_active_window()
-	local tab = tab_or_pane or window:active_tab()
+	local tab = tab_or_pane
+
+	-- A keybinding callback supplies the active tab explicitly. For callers
+	-- that pass a pane directly, retain support when the pane exposes its tab.
+	if tab_or_pane and tab_or_pane.get_position then
+		local ok, parent_tab = pcall(function()
+			return tab_or_pane:tab()
+		end)
+		if ok then
+			tab = parent_tab
+		else
+			logger:error("Could not determine the tab for the specified pane")
+			return false
+		end
+	end
 
 	if not tab then
-		logger:error("No active tab found")
+		logger:error("No tab supplied; call this from a keybinding callback or pass a tab/pane")
 		return false
 	end
 
