@@ -7,7 +7,7 @@ local M = {}
 
 local function init()
 	local opts = {
-		keywords = { "https", "github", "chrisgve", "pivot_pane", "wezterm" },
+		keywords = { "https", "github", "aquaticcalf", "pivot_pane", "wezterm" },
 		auto = true,
 	}
 	dev.setup(opts)
