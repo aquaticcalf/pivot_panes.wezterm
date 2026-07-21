@@ -271,12 +271,14 @@ function M.toggle_orientation(tab_or_pane)
 
 		-- If no selection, use the active pane and try to find an adjacent pane
 		if #selected_panes < 2 then
-			local active_pane
-			for _, p_info in ipairs(panes_with_info) do
-				if p_info.is_active then
-					active_pane = p_info.pane
-					table.insert(selected_panes, active_pane)
-					break
+			local active_pane = selected_panes[1]
+			if not active_pane then
+				for _, p_info in ipairs(panes_with_info) do
+					if p_info.is_active then
+						active_pane = p_info.pane
+						table.insert(selected_panes, active_pane)
+						break
+					end
 				end
 			end
 
