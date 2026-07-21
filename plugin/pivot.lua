@@ -121,18 +121,11 @@ end
 ---@param current_orientation string Current orientation "horizontal" or "vertical"
 ---@return boolean success
 function M.pivot_panes(panes, current_orientation, pane_info_by_id, gui_window)
-	-- Capture state of both panes
-	local pane_states = {}
-	for i, pane in ipairs(panes) do
-		pane_states[i] = M.capture_pane_state(pane)
-	end
-
 	-- Determine target orientation (toggle)
 	local target_orientation = current_orientation == "horizontal" and "vertical" or "horizontal"
 
 	-- Sort panes by position for consistent behavior
 	local sorted_panes = {}
-	local sorted_states = {}
 	local first_info = pane_info_by_id[panes[1]:pane_id()]
 	local second_info = pane_info_by_id[panes[2]:pane_id()]
 
@@ -140,53 +133,36 @@ function M.pivot_panes(panes, current_orientation, pane_info_by_id, gui_window)
 		-- Sort by x position for horizontal orientation
 		if first_info.left < second_info.left then
 			sorted_panes = { panes[1], panes[2] }
-			sorted_states = { pane_states[1], pane_states[2] }
 		else
 			sorted_panes = { panes[2], panes[1] }
-			sorted_states = { pane_states[2], pane_states[1] }
 		end
 	else
 		-- Sort by y position for vertical orientation
 		if first_info.top < second_info.top then
 			sorted_panes = { panes[1], panes[2] }
-			sorted_states = { pane_states[1], pane_states[2] }
 		else
 			sorted_panes = { panes[2], panes[1] }
-			sorted_states = { pane_states[2], pane_states[1] }
 		end
 	end
 
-	-- Close the second pane
-	if not gui_window then
-		logger:error("A GUI window is required to close the pane being pivoted")
+	-- The CLI can re-parent an existing pane into a newly-created split. Unlike
+	-- close-and-split, this keeps the same PTY and its live process state.
+	local direction = target_orientation == "horizontal" and "--right" or "--bottom"
+	local ok, _, stderr = wezterm.run_child_process({
+		wezterm.executable_dir .. "/wezterm.exe",
+		"cli",
+		"split-pane",
+		"--pane-id",
+		tostring(sorted_panes[1]:pane_id()),
+		"--move-pane-id",
+		tostring(sorted_panes[2]:pane_id()),
+		direction,
+	})
+
+	if not ok then
+		logger:error("Failed to move the live pane:", stderr)
 		return false
 	end
-	sorted_panes[2]:activate()
-	gui_window:perform_action(wezterm.action.CloseCurrentPane({ confirm = false }), sorted_panes[2])
-
-	-- Create a new pane with the new orientation
-	local new_pane
-	if target_orientation == "horizontal" then
-		-- Create horizontal split (side by side)
-		new_pane = sorted_panes[1]:split({
-			direction = "Right",
-		})
-	else
-		-- Create vertical split (stacked)
-		new_pane = sorted_panes[1]:split({
-			direction = "Bottom",
-		})
-	end
-
-	if not new_pane then
-		logger:error("Failed to create new pane")
-		return false
-	end
-
-	-- The first pane remains alive with its state intact; restore only the pane
-	-- recreated by the new split.
-	logger:debug("Restoring recreated pane:", sorted_states[2].process_name)
-	M.restore_pane_state(new_pane, sorted_states[2])
 
 	return true
 end
